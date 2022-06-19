@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<folder>
+	<name><![CDATA[skippy]]></name>
+	<tooltip><![CDATA[What's that Skippy ?]]></tooltip>
+	<description><![CDATA[Skippy Logging Framework Reports]]></description>
+		<display id="ce71b151-017d-1000-8001-7f000101aee2" type="" style="Table" enable="true">
+		<name><![CDATA[Log entries for the last n hours]]></name>
+		<description><![CDATA[Listing of log table entries for a specified number of hours before now.]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select 
+    id, log_ts, username, os_user, instance, sid, serial, 
+    log_source, line_no, message_type, message_group, message
+from skippy_logs
+where log_ts >= systimestamp - (nvl(:hrs,1)/24)]]></sql>
+			<binds>
+				<bind id="hrs">
+					<prompt><![CDATA[Number of hours]]></prompt>
+					<tooltip><![CDATA[Number of Hours to look back ( up to midnight this morning)]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+	</display>
+	<display id="ce7466b5-017d-1000-8003-7f000101aee2" type="" style="Table" enable="true">
+		<name><![CDATA[Tail Log Table]]></name>
+		<description><![CDATA[Log entries for the last n minutes in descending order of log timestamp]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select 
+    id, log_ts, username, os_user, instance, sid, serial, 
+    log_source, line_no, message_type, message_group, message
+from skippy_logs
+where log_ts >= systimestamp - ((1/24/60)* nvl(:mins, 5))
+order by log_ts desc]]></sql>
+			<binds>
+				<bind id="mins">
+					<prompt><![CDATA[Number of minutes]]></prompt>
+					<tooltip><![CDATA[mins]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+	</display>
+	<display id="e79f09d6-017d-1000-8001-7f00010136eb" type="" style="Table" enable="true">
+		<name><![CDATA[Message Group Log Entries with Intervals]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select
+    id, log_ts, username, os_user, instance, sid, serial, 
+    log_source, line_no, message_type, message_group, message,
+    log_ts - lag(log_ts) over (order by log_ts) as duration
+from skippy_logs
+where log_ts >= nvl(to_date(:ts, 'DD-MON-YYYY'), trunc(sysdate))
+and upper(message_group) = upper(:msg_group)]]></sql>
+			<binds>
+				<bind id="ts">
+					<prompt><![CDATA[date in format DD-MON-YYYY]]></prompt>
+					<tooltip><![CDATA[ts]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="msg_group">
+					<prompt><![CDATA[Message Group]]></prompt>
+					<tooltip><![CDATA[msg_group]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+	</display>
+</folder>
+</displays>
