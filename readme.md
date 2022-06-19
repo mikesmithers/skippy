@@ -74,7 +74,9 @@ This will create a node called *Skippy* under *User Defined Reports*
 
 ## Tests
 The repository includes a suite of tests written using the utPLSQL 3.x framework.
-If you have the framework installed, you can execute the tests by deploying the test packages and then running the script :
+You can [find utPLSQL here.](https://github.com/utPLSQL/utPLSQL)
+With utPlSQL installed, you can execute the tests by deploying the test packages and then running the script :
+
 ```
 run_all_tests.sql
 ```
