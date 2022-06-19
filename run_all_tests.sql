@@ -9,7 +9,7 @@ from dba_registry
 where comp_id = 'CATALOG'
 /
 
-spool 'test_outptut_&v_version..txt'
+spool 'test_output_&v_version..txt'
 
 prompt Running Full Test Suite on Oracle Database Version &v_version
 
