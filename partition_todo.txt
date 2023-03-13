@@ -1,0 +1,49 @@
+**** do we want to retain the FK 
+**** if so then maybe just use the 11g compliant name ?
+declare
+    v_11g_fk := 'alter table skippy_logs add constraint skippy_logs_message_types_fk foreign key (message_type) references skippy_message_types(cid)';
+    v_default_fk := 'alter table skippy_logs add constraint skippy_logs_skippy_message_types_fk key(message_type) references skippy_message_types(cid);
+    
+begin
+    if dbms_db_version.version <= 11 then
+        execute immediate v_11g_fk;
+    else
+        execute immediate v_default_fk;
+    end if;
+end;
+/
+
+=====================================
+clear screen
+set serverout on
+set verify off
+accept part_option prompt 'Does your Oracle License cover you for Partitioning  (Y/N) : '
+
+column log_tab_script new_value v_script noprint
+select case when upper('&part_option') = 'Y' then 'skippy_logs_part.sql' else 'skippy_logs.sql' end as log_tab_script
+from dual;
+
+@&v_script
+
+===========================
+Purge Routine ( for partitioned and non-partitioned)
+
+select count(*)
+from all_tab_partitions
+where table_name = 'SKIPPY_LOGS';
+
+if v_count = 0 then
+    -- table not partitioned
+    non_part_purge( i_days);
+else
+    part_purge( i_days);
+end if;
+
+procedure non_part_purge - delete from table where log_ts < (trunc(sysdate) - i_days);
+
+procedure part_purge 
+    select partition_name
+    from all_tab_partitions
+    where table_name = 'SKIPPY_LOGS'
+    and high_value --- need a translation for high_value
+    
