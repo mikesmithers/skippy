@@ -12,7 +12,7 @@ create table skippy_logs(
     message_group varchar2(4000),
     message varchar2(4000) not null,
     constraint skippy_logs_pk primary key (id),
-    constraint skippy_logs_plsl_message_types_fk foreign key (message_type) references skippy_message_types(cid))
+    constraint skippy_logs_message_types_fk foreign key (message_type) references skippy_message_types(cid))
 /
 
 create sequence skippy_logs_id_seq;
