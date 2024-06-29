@@ -229,8 +229,11 @@ values( 'SESSION_DEFAULT_COLLATION', 12, 2);
 insert into skippy_userenv_parameters( parameter_name, db_version, db_release) 
 values( 'LDAP_SERVER_TYPE', 18, 0);
 
+--
+-- Despite being included in the 19c documentation, this parameter is not available until 23ai
+-- Mike 29/6/24
 insert into skippy_userenv_parameters( parameter_name, db_version, db_release) 
-values( 'CDB_DOMAIN', 19, 0);
+values( 'CDB_DOMAIN', 23, 0);
 
 insert into skippy_userenv_parameters( parameter_name, db_version, db_release) 
 values( 'IS_APPLICATION_PDB', 19, 0);
