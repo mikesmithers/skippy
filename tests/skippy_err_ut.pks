@@ -9,4 +9,7 @@ create or replace package skippy_err_ut as
     
     --%test(specify_group)
     procedure specify_group;
+
+    --%test(get_err function)
+    procedure err_function; 
 end skippy_err_ut;    

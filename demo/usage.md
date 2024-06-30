@@ -8,8 +8,17 @@ You can deploy this package using the source code in this directory.
 You can run all procedures in the package by running :
 
 ```sql
+set serverout on
 exec demo.run_all;
 ```
+Note that you will see an error when you run this :
+
+```
+ORA-20511: Your finger, you fool!
+ORA-06512: at "MIKE.DEMO", line 62
+```
+This is the value returned by a call to the SKIPPY.GET_ERR function in the package.
+
 
 ## Logging
 
@@ -33,6 +42,10 @@ To log the current error stack :
 
 ```sql
 skippy.err;
+```
+Alternatively, you can retrieve the current error stack into a variable :
+```sql
+v_message := skippy.get_err;
 ```
 
 To record a list of parameter values, you can use the ADD_PARAM procedure to build the list. 

@@ -14,6 +14,7 @@ as
         
     procedure joey;
     procedure jack;
+    procedure skund;
 
     procedure run_all;
 end demo;

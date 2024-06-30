@@ -56,6 +56,14 @@ create or replace package body demo as
         skippy.log('Down a mine shaft ?', 'W');
     end jack;
     
+    procedure skund 
+    is  
+    begin 
+        raise_application_error(-20511, 'Your finger, you fool!');
+    exception when others then  
+        dbms_output.put_line(skippy.get_err);
+    end skund;
+
     procedure run_all
     is
     begin
@@ -67,6 +75,8 @@ create or replace package body demo as
         skippy.set_msg_group(null);
         
         jack;
+
+        skund;
         
         -- Explicitly set the message group
         skippy.log('No worries', i_group=> 'TROUPE');

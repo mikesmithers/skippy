@@ -67,6 +67,9 @@ create or replace package skippy as
         i_msg_type in skippy_logs.message_type%type default 'I', 
         i_group in skippy_logs.message_group%type default null);    
     
+    -- Return the formatted error stack instead of writing it to the log table
+    function get_err return varchar2;
+    
     -- Log the current error stack
     procedure err( i_group in skippy_logs.message_group%type default null);
 end skippy;

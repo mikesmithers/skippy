@@ -99,4 +99,30 @@ create or replace package body skippy_err_ut as
         -- Teardown
         remove_log_records('SPECIFY_GROUP');
     end specify_group;    
+    
+    -- get_err function
+    procedure err_function
+    is
+        v_joey number;
+        v_expected varchar2(4000);
+        v_actual skippy_logs.message%type;
+    begin
+        -- Setup
+
+        v_expected := 'ORA-06502: PL/SQL: numeric or value error: character to number conversion error'
+            ||chr(10)||'ORA-06512: at "MIKE.SKIPPY_ERR_UT", line 118'||chr(10);
+
+        
+        -- Execute
+        begin
+            v_joey := 'No worries';
+        exception when others then
+            v_actual := skippy.get_err;
+        end;
+        
+        -- Validate
+        ut.expect( v_actual).to_(equal(v_expected));
+        
+    end err_function;    
+    
 end skippy_err_ut;    

@@ -267,6 +267,12 @@ create or replace package body skippy as
             i_group => i_group);
     end env;    
     
+    function get_err return varchar2
+    is
+    begin 
+        return sqlerrm||chr(10)||dbms_utility.format_error_backtrace;
+    end get_err;
+
     procedure err( i_group in skippy_logs.message_group%type default null)
     is
         v_msg varchar2(4000);
