@@ -12,7 +12,9 @@ prompt Creating Reference Data...
 prompt
 
 @tables/skippy_userenv_parameters_dml.sql
+@tables/add_23_userenv_params.sql
 @tables/skippy_message_types_dml.sql
+
 
 prompt Creating Package
 prompt

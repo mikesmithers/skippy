@@ -12,13 +12,14 @@ where parameter_name = 'CDB_DOMAIN';
 insert into skippy_userenv_parameters( parameter_name, db_version, db_release) 
 values( 'CLOUD_SERVICE', 19, 0);
 
+-- Either the docs have been updated or I missed these first time round...
 insert into skippy_userenv_parameters( parameter_name, db_version, db_release) 
 values( 'CURRENT_SQL_LENGTH', 19, 0);
 
--- 23ai new params
 insert into skippy_userenv_parameters( parameter_name, db_version, db_release) 
-values( 'DRAIN_STATUS', 23, 0);
+values( 'DRAIN_STATUS', 19, 0);
 
+-- 23ai new params
 insert into skippy_userenv_parameters( parameter_name, db_version, db_release) 
 values( 'STANDBY_MAX_DATA_DELAY', 23, 0);
 
