@@ -82,6 +82,18 @@ create or replace package body skippy as
         g_level_cid := null;
     end disable_logging;
     
+    procedure enable_output 
+    is   
+    begin 
+        g_interactive := 'Y';
+    end enable_output;
+
+    procedure disable_output 
+    is    
+    begin 
+        g_interactive := 'N';
+    end disable_output;
+
     function current_setting( i_setting in varchar2) return varchar2
     is
     begin
@@ -212,6 +224,13 @@ create or replace package body skippy as
             v_start := v_start + GC_MAX_MSG_LEN;
             commit;
 
+            -- Output to console if enabled
+            -- This is in a nested block so that any error is non-fatal
+            begin
+                if g_interactive = 'Y' then
+                    dbms_output.put_line(v_msg_chunk);
+                end if;
+            end;
         end loop;    
     exception
         when others then null;

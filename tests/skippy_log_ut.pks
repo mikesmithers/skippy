@@ -28,6 +28,12 @@ as
     --%test(logging_disabled)
     procedure logging_disabled;
     
+    --%test(Interactive output enabled);
+    procedure output_enabled;
+    
+    --%test(Interactive output disabled);
+    procedure output_disabled;
+    
 end skippy_log_ut;
 /
     

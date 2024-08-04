@@ -32,6 +32,14 @@ create or replace package skippy as
     procedure set_log_level( i_level in skippy_message_types.cid%type);
     procedure disable_logging;
 
+    --
+    -- Control outputting messages to the console via dbms_output as well as logging them
+    -- 
+    g_interactive varchar2(1) := 'N';
+
+    procedure enable_output;
+    procedure disable_output;
+    
     -- Return the current Message Group ( i_setting = 'GROUP') or Logging level ( i_setting = 'LEVEL')
     -- for this session
     --

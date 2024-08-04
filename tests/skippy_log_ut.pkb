@@ -331,8 +331,92 @@ as
         where id = v_id;
 
         ut.expect(v_count).to_(equal(0));
+        
+        -- teardown
+        skippy.set_log_level('A');
+        
     end logging_disabled;
 
+    --%test(Interactive output enabled);
+    procedure output_enabled
+    is
+        v_count pls_integer;
+
+        v_msg skippy_logs.message%type;
+        v_status pls_integer;
+        
+        v_actual_log skippy_logs%rowtype;
+    begin
+        -- setup
+        set_globals;
+        g_log_rec.log_source := 'SKIPPY_LOG_UT.OUTPUT_ENABLED';
+        g_log_rec.message := 'Wallaby will be';
+
+        -- execute
+        skippy.enable_output;
+        skippy.log(g_log_rec.message);
+        dbms_output.get_line(v_msg, v_status);
+        
+        -- Validate
+        select *
+        into v_actual_log
+        from skippy_logs
+        where id = get_message_id;
+        
+        -- DBMS_OUTPUT check
+        ut.expect(v_status).to_(equal(0));
+        ut.expect( v_msg).to_(equal(g_log_rec.message));
+        
+        -- Log record check
+        ut.expect(g_log_rec.log_source).to_(equal(v_actual_log.log_source));
+        ut.expect(g_log_rec.message).to_(equal(v_actual_log.message));
+
+        -- teardown
+        remove_log_records('OUTPUT_ENABLED');
+    end output_enabled;
+        
+        
+    --%test(Interactive output disabled);
+    procedure output_disabled
+    is
+        v_count pls_integer;
+        v_id skippy_logs.id%type;
+
+        v_msg skippy_logs.message%type;
+        v_status pls_integer;
+        
+        v_actual_log skippy_logs%rowtype;
+    begin
+        -- setup
+        set_globals;
+        g_log_rec.log_source := 'SKIPPY_LOG_UT.OUTPUT_DISABLED';
+        g_log_rec.message := 'Wallaby will be';
+
+        v_id := get_message_id;
+        v_id := v_id + 1;
+    
+        -- execute
+        skippy.disable_output;
+        skippy.log(g_log_rec.message);
+        dbms_output.get_line(v_msg, v_status);
+        
+        -- Validate
+        select *
+        into v_actual_log
+        from skippy_logs
+        where id = get_message_id;
+        
+        -- DBMS_OUTPUT check
+        ut.expect(v_status).to_(equal(1));
+        ut.expect( v_msg).to_(be_null());
+        
+        -- Log record check
+        ut.expect(g_log_rec.log_source).to_(equal(v_actual_log.log_source));
+        ut.expect(g_log_rec.message).to_(equal(v_actual_log.message));
+
+        -- teardown
+        remove_log_records('OUTPUT_DISABLED');
+    end output_disabled;    
 end skippy_log_ut;
 /
     

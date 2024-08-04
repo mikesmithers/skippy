@@ -62,6 +62,20 @@ Parameters of type VARCHAR2, DATE, NUMBER and BOOLEAN are supported :
 ```
 ![Parameter List](../img/param_list.png)
 
+## Output Messages Interactively
+
+You can output messages to an interactive session as well as them being written to the table.
+
+```sql
+set serverout on 
+begin
+    skippy.enable_output;
+    demo.jill;
+end;
+/
+```
+![Parameter List](../img/interactive_output.png)
+
 ## Grouping Messages
 
 You can assign messages to a group. This can be useful if you are running a batch process which invloves calls to a number of database objects.
