@@ -230,6 +230,8 @@ create or replace package body skippy as
                 if g_interactive = 'Y' then
                     dbms_output.put_line(v_msg_chunk);
                 end if;
+            exception
+                when others then null;
             end;
         end loop;    
     exception
