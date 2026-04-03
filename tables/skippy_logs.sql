@@ -1,16 +1,16 @@
 create table skippy_logs(
     id number, -- not using an identity column to remain backward compatible with 11g
     log_ts timestamp not null,
-    username varchar2(128),
-    os_user varchar2(4000),
+    username varchar2(128 char),
+    os_user varchar2(4000 char),
     instance number,
     sid number,
     serial number,
-    log_source varchar2(4000),
+    log_source varchar2(4000 char),
     line_no number,
-    message_type varchar2(25) not null,
-    message_group varchar2(4000),
-    message varchar2(4000) not null,
+    message_type varchar2(25 char) not null,
+    message_group varchar2(4000 char),
+    message varchar2(4000 char) not null,
     constraint skippy_logs_pk primary key (id),
     constraint skippy_logs_message_types_fk foreign key (message_type) references skippy_message_types(cid))
 /
