@@ -1,12 +1,29 @@
 create or replace package body skippy as
 
     -- Private
+    g_crlf constant char(1 char) := chr(10);
     g_level_num skippy_message_types.log_level%type := 999;
     g_level_cid skippy_message_types.cid%type := 'A';
     g_msg_group skippy_logs.message_group%type;
     
+    function format_params_from_array( i_params in t_params_type ) return skippy_logs.extra%type is
+       v_retval skippy_logs.extra%type;
+       v_key    paramname_type := i_params.first;
+    begin
+       
+       <<input_parameters>>
+       while v_key is not null
+       loop
+          v_retval := v_retval || g_crlf || v_key || ' : ' || i_params(v_key);
+          v_key := i_params.next(v_key);
+       end loop input_parameters;
+       
+       return trim(g_crlf from v_retval);
+       
+    end format_params_from_array;
+
     function logit( i_msg_type in varchar2)
-        return boolean
+        return boolean deterministic
     is
         v_level number;
     begin
@@ -14,13 +31,13 @@ create or replace package body skippy as
         into v_level
         from skippy_message_types
         where cid = upper(i_msg_type);
-        
+
         return v_level <= g_level_num;
     exception when no_data_found then
         return true;
-    end logit;    
-    
-    function legacy_members( 
+    end logit;
+
+    function legacy_members(
         i_owner in all_identifiers.owner%type,
         i_object in all_identifiers.object_name%type,
         i_line in all_identifiers.line%type)
@@ -42,26 +59,26 @@ create or replace package body skippy as
         into v_rtn
         from package_members
         where line = ( select max(line) from package_members where line < i_line);
-        
+
         return v_rtn;
     exception when no_data_found then
         -- Package not compiled with plscope_settings of identifiers:all so we can't get the member this way
         return null;
-    end legacy_members;    
-    -- Public 
-    
+    end legacy_members;
+    -- Public
+
     function db_version return number
     is
     begin
         return dbms_db_version.version + (dbms_db_version.release/10);
-    end db_version;    
-    
+    end db_version;
+
     procedure set_msg_group( i_group in skippy_logs.message_group%type)
     is
     begin
         g_msg_group := i_group;
-    end set_msg_group;    
-    
+    end set_msg_group;
+
     procedure set_log_level( i_level in skippy_message_types.cid%type)
     is
     begin
@@ -69,28 +86,28 @@ create or replace package body skippy as
         into g_level_num
         from skippy_message_types
         where cid = upper(i_level);
-        
+
         g_level_cid := upper(i_level);
     exception when no_data_found then
         raise_application_error(-20901, i_level||' is not a valid CID in skippy_message_types');
     end set_log_level;
-    
+
     procedure disable_logging
     is
     begin
         g_level_num := 0;
         g_level_cid := null;
     end disable_logging;
-    
-    procedure enable_output 
-    is   
-    begin 
+
+    procedure enable_output
+    is
+    begin
         g_interactive := 'Y';
     end enable_output;
 
-    procedure disable_output 
-    is    
-    begin 
+    procedure disable_output
+    is
+    begin
         g_interactive := 'N';
     end disable_output;
 
@@ -105,7 +122,7 @@ create or replace package body skippy as
             raise_application_error(-20902, i_setting||q'[ is not recognized. Valid values are GROUP or LEVEL.]');
         end if;
     end current_setting;
-    
+
     procedure add_param( i_name in varchar2, i_value in varchar2, io_list in out varchar2)
     is
     begin
@@ -114,7 +131,7 @@ create or replace package body skippy as
         end if;
         io_list := io_list||i_name||' => '||i_value;
     end add_param;
-    
+
     procedure add_param( i_name in varchar2, i_value in number, io_list in out varchar2)
     is
     begin
@@ -123,7 +140,7 @@ create or replace package body skippy as
         end if;
         io_list := io_list||i_name||' => '||to_char( i_value);
     end add_param;
-    
+
     procedure add_param( i_name in varchar2, i_value in date, io_list in out varchar2)
     is
     begin
@@ -131,8 +148,8 @@ create or replace package body skippy as
             io_list := io_list||', ';
         end if;
         io_list := io_list||i_name||' => '||to_char( i_value, sys_context('userenv', 'nls_date_format'));
-    end add_param;    
-    
+    end add_param;
+
     procedure add_param( i_name in varchar2, i_value in boolean, io_list in out varchar2)
     is
     begin
@@ -140,32 +157,39 @@ create or replace package body skippy as
             io_list := io_list||', ';
         end if;
         io_list := io_list||i_name||' => '||case when i_value then 'TRUE' else 'FALSE' end;
-    end add_param;    
-    
-    
+    end add_param;
+
+
     procedure log(
         i_msg in varchar2,
         i_msg_type in skippy_logs.message_type%type default 'I',
         i_source in skippy_logs.log_source%type default null,
         i_line_no in pls_integer default null,
-        i_group in skippy_logs.message_group%type default null)
+        i_group in skippy_logs.message_group%type default null,
+        i_extra in clob default null,
+        i_params in t_params_type default t_params_type())
     is
         v_owner user_users.username%type := null;
         v_name user_objects.object_name%type := null;
         v_line number := null;
         v_type user_objects.object_type%type := null;
-        
+
         v_start pls_integer := 1;
         v_len pls_integer;
         v_member varchar2(128);
-        
+
         v_msg_chunk skippy_logs.message%type;
         
+        v_params skippy_logs.extra%type := case 
+                                             when i_params.count = 0 then null 
+                                             else format_params_from_array(i_params=>i_params)
+                                           end;
+
         pragma autonomous_transaction;
     begin
         if not logit( i_msg_type) then
             return;
-        end if;    
+        end if;
 
         if i_source is null then
             owa_util.who_called_me(
@@ -173,13 +197,13 @@ create or replace package body skippy as
                 name => v_name,
                 lineno => v_line,
                 caller_t => v_type);
-                
+
         else
             v_name := i_source;
             v_line := i_line_no;
-        end if;    
-      
-        if v_type = 'PACKAGE BODY' and dbms_db_version.ver_le_11 
+        end if;
+
+        if v_type = 'PACKAGE BODY' and dbms_db_version.ver_le_11
             and instr(v_name, '.',1,1) = 0
         then
             v_member := legacy_members( v_owner, v_name, v_line);
@@ -188,6 +212,13 @@ create or replace package body skippy as
             end if;
         end if;
         
+        if i_extra is not null and i_params.count > 0 then
+           -- We could throw an error here, but that is not advisable
+           -- I therfore choose to overwrite the i_extra parameter
+           -- the i_extra will not be used in the insert!
+           null;
+        end if;
+
         v_len := nvl( length( i_msg), 0);
 
         while v_start <= v_len loop
@@ -206,7 +237,8 @@ create or replace package body skippy as
                 line_no,
                 message_type,
                 message_group,
-                message)
+                message,
+                extra)
             values(
                 skippy_logs_id_seq.nextval, -- id,
                 systimestamp, -- log_ts
@@ -219,7 +251,9 @@ create or replace package body skippy as
                 v_line, -- line_no
                 nvl(i_msg_type, 'A'), -- message_type
                 nvl(i_group, g_msg_group), -- message_group
-                v_msg_chunk); -- message
+                v_msg_chunk,  -- message
+                coalesce(v_params, i_extra) -- parameters overwrite the "extra" parameter
+                );
 
             v_start := v_start + GC_MAX_MSG_LEN;
             commit;
@@ -233,13 +267,13 @@ create or replace package body skippy as
             exception
                 when others then null;
             end;
-        end loop;    
+        end loop;
     exception
         when others then null;
-    end log;    
-    
-    procedure env( 
-        i_msg_type in skippy_logs.message_type%type default 'I', 
+    end log;
+
+    procedure env(
+        i_msg_type in skippy_logs.message_type%type default 'I',
         i_group in skippy_logs.message_group%type default null)
     is
 
@@ -247,12 +281,12 @@ create or replace package body skippy as
         v_source skippy_logs.log_source%type;
         v_line pls_integer;
         v_type varchar2(128);
-       
+
         v_member varchar2(128);
 
         v_paramlist varchar2(32767);
     begin
-    
+
         owa_util.who_called_me(
             owner => v_owner,
             name => v_source,
@@ -268,7 +302,7 @@ create or replace package body skippy as
         end if;
 
         for r_param in (
-            select parameter_name, 
+            select parameter_name,
                 sys_context('userenv', parameter_name) as session_value
             from skippy_userenv_parameters
             where version_no <= skippy.db_version
@@ -278,19 +312,19 @@ create or replace package body skippy as
             -- run into ORA-02003 : Invalid USERENV parameter ( up to and including 18c)
             if r_param.session_value is not null then
                 add_param( r_param.parameter_name, r_param.session_value, v_paramlist);
-            end if;    
+            end if;
         end loop;
-        log( 
-            i_msg => v_paramlist, 
-            i_msg_type => i_msg_type, 
+        log(
+            i_msg => v_paramlist,
+            i_msg_type => i_msg_type,
             i_source => v_source,
             i_line_no =>  v_line,
             i_group => i_group);
-    end env;    
-    
+    end env;
+
     function get_err return varchar2
     is
-    begin 
+    begin
         return sqlerrm||chr(10)||dbms_utility.format_error_backtrace;
     end get_err;
 
@@ -301,12 +335,12 @@ create or replace package body skippy as
         v_source skippy_logs.log_source%type;
         v_line pls_integer;
         v_type varchar2(128);
-        
+
         v_member varchar2(128);
-        
+
     begin
         v_msg := sqlerrm||chr(10)||dbms_utility.format_error_backtrace;
-        
+
         owa_util.who_called_me(
             owner => v_owner,
             name => v_source,
@@ -321,11 +355,11 @@ create or replace package body skippy as
             end if;
         end if;
         log(
-            i_msg => v_msg, 
-            i_msg_type => 'E', 
-            i_source => v_source, 
+            i_msg => v_msg,
+            i_msg_type => 'E',
+            i_source => v_source,
             i_line_no => v_line,
             i_group => i_group);
-    end err;    
+    end err;
 end skippy;
 /
