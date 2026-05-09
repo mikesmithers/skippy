@@ -8,7 +8,7 @@
 
 prompt Adding column to SKIPPY_LOGS...
 prompt
-@tables/skippy_logs_add_extra.sql
+@tables/skippy_logs_add_message_clob.sql
 
 prompt Converting SKIPPY_LOGS to use CHAR length semantics...
 prompt

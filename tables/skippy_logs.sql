@@ -11,7 +11,7 @@ create table skippy_logs(
     message_type varchar2(25 char) not null,
     message_group varchar2(4000 char),
     message varchar2(4000 char) not null,
-    extra clob,
+    message_clob clob,
     constraint skippy_logs_pk primary key (id),
     constraint skippy_logs_message_types_fk foreign key (message_type) references skippy_message_types(cid))
 /
@@ -31,4 +31,4 @@ comment on column skippy_logs.line_no is 'The line number in the caller from whe
 comment on column skippy_logs.message_type is 'The SKIPPY_MESSAGE_TYPES.CID of this message';
 comment on column skippy_logs.message_group is 'The user-defined group to which this message belongs';
 comment on column skippy_logs.message is 'The actual log message';
-comment on column skippy_logs.extra is 'Extra CLOB information like for example parameters, and json requests or results';
+comment on column skippy_logs.message_clob is 'Extra CLOB information like for example parameters, and json requests or results';

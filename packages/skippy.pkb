@@ -2,19 +2,23 @@ create or replace package body skippy as
 
     -- Private
     g_crlf constant char(1 char) := chr(10);
+    
+    g_param_separator constant varchar2(4 char) :=  ' => ';
     g_level_num skippy_message_types.log_level%type := 999;
     g_level_cid skippy_message_types.cid%type := 'A';
     g_msg_group skippy_logs.message_group%type;
     
-    function format_params_from_array( i_params in t_params_type ) return skippy_logs.extra%type is
-       v_retval skippy_logs.extra%type;
+    function format_params_from_array( i_params in t_params_type ) 
+        return skippy_logs.message_clob%type 
+    is
+       v_retval skippy_logs.message_clob%type;
        v_key    paramname_type := i_params.first;
     begin
        
        <<input_parameters>>
        while v_key is not null
        loop
-          v_retval := v_retval || g_crlf || v_key || ' : ' || i_params(v_key);
+          v_retval := v_retval || g_crlf || v_key || g_param_separator || i_params(v_key);
           v_key := i_params.next(v_key);
        end loop input_parameters;
        
@@ -129,7 +133,7 @@ create or replace package body skippy as
         if io_list is not null then
             io_list := io_list||', ';
         end if;
-        io_list := io_list||i_name||' => '||i_value;
+        io_list := io_list||i_name||g_param_separator||i_value;
     end add_param;
 
     procedure add_param( i_name in varchar2, i_value in number, io_list in out varchar2)
@@ -138,7 +142,7 @@ create or replace package body skippy as
         if io_list is not null then
             io_list := io_list||', ';
         end if;
-        io_list := io_list||i_name||' => '||to_char( i_value);
+        io_list := io_list||i_name||g_param_separator||to_char( i_value);
     end add_param;
 
     procedure add_param( i_name in varchar2, i_value in date, io_list in out varchar2)
@@ -147,7 +151,7 @@ create or replace package body skippy as
         if io_list is not null then
             io_list := io_list||', ';
         end if;
-        io_list := io_list||i_name||' => '||to_char( i_value, sys_context('userenv', 'nls_date_format'));
+        io_list := io_list||i_name||g_param_separator||to_char( i_value, sys_context('userenv', 'nls_date_format'));
     end add_param;
 
     procedure add_param( i_name in varchar2, i_value in boolean, io_list in out varchar2)
@@ -156,7 +160,7 @@ create or replace package body skippy as
         if io_list is not null then
             io_list := io_list||', ';
         end if;
-        io_list := io_list||i_name||' => '||case when i_value then 'TRUE' else 'FALSE' end;
+        io_list := io_list||i_name||g_param_separator||case when i_value then 'TRUE' else 'FALSE' end;
     end add_param;
 
 
@@ -178,13 +182,14 @@ create or replace package body skippy as
         v_len pls_integer;
         v_member varchar2(128);
 
-        v_msg_chunk skippy_logs.message%type;
-        
-        v_params skippy_logs.extra%type := case 
-                                             when i_params.count = 0 then null 
-                                             else format_params_from_array(i_params=>i_params)
-                                           end;
+        v_msg skippy_logs.message%type;
+        v_msg_length pls_integer;
+        v_param_length pls_integer;
+        v_have_extra boolean;
+        v_params skippy_logs.message_clob%type;
+        v_extra clob;
 
+        C_EXTRA_MESSAGE constant varchar2(50) := 'Message stored in MESSAGE_CLOB';        
         pragma autonomous_transaction;
     begin
         if not logit( i_msg_type) then
@@ -211,63 +216,101 @@ create or replace package body skippy as
                 v_name := v_name||'.'||v_member;
             end if;
         end if;
+ 
+ 
+        --
+        -- Determine the message contents and where to put everything
+        --
+        v_msg_length := nvl(length(i_msg), 0);
+
+        --
+        -- Nested block to isolate any exceptions and ensure that we log what we can
+        --
+        begin
+            v_params := case when i_params.count > 0 then format_params_from_array(i_params=>i_params) end;
+        exception when others then
+            v_params := 'Error reading i_params : '||get_err;
+        end;
         
-        if i_extra is not null and i_params.count > 0 then
-           -- We could throw an error here, but that is not advisable
-           -- I therfore choose to overwrite the i_extra parameter
-           -- the i_extra will not be used in the insert!
-           null;
+        v_param_length := nvl(length(v_params), 0);
+
+        v_have_extra := i_extra is not null;
+
+        -- If we have a message check that it will fit into the MESSAGE column
+        if v_msg_length between 1 and GC_MAX_MSG_LEN then
+            v_msg := i_msg;
+        end if;    
+    
+        -- I_PARAMS parameters may be stored either in the MESSAGE or the MESSAGE_CLOB column.
+        -- If the message is going into the message_clob column then the parameters will be stored BEFORE the message.
+        if v_param_length between 1 and GC_MAX_MSG_LEN then
+            if v_msg_length = 0 then
+                v_msg := v_params;
+            else
+                v_msg := nvl(v_msg, C_EXTRA_MESSAGE);
+                v_extra := v_params;
+            end if;
+        elsif v_param_length > GC_MAX_MSG_LEN then 
+            v_msg := nvl(v_msg, C_EXTRA_MESSAGE);
+            v_extra := v_extra||case when v_extra is not null then g_crlf end|| v_params;
         end if;
 
-        v_len := nvl( length( i_msg), 0);
+        -- Message too long to go into MESSAGE so put it in MESSAGE_CLOB.
+        -- It will appear AFTER any parameters
+        if v_msg_length > GC_MAX_MSG_LEN then
+            v_msg := nvl(v_msg, C_EXTRA_MESSAGE);
+            v_extra := v_extra||case when v_extra is not null then g_crlf end ||i_msg;
+        end if;    
+    
+        -- I_EXTRA parameter
+        if v_have_extra then 
+            v_msg := nvl(v_msg, C_EXTRA_MESSAGE);
+            v_extra := v_extra||case when v_extra is not null then g_crlf end|| i_extra;
+        end if;
 
-        while v_start <= v_len loop
-            -- For 11g, we need an intermediate variable to store any long messages
-            -- as otherwise, we'll get ORA-01461 : Can only bind a long variable for insert into a LONG column
-            v_msg_chunk := substr(i_msg, v_start, GC_MAX_MSG_LEN);
-            insert into skippy_logs(
-                id,
-                log_ts,
-                username,
-                os_user,
-                instance,
-                sid,
-                serial,
-                log_source,
-                line_no,
-                message_type,
-                message_group,
-                message,
-                extra)
-            values(
-                skippy_logs_id_seq.nextval, -- id,
-                systimestamp, -- log_ts
-                sys_context('userenv', 'session_user'), -- username
-                sys_context('userenv', 'os_user'), -- os_user
-                sys_context('userenv', 'instance'), -- instance
-                sys_context('userenv', 'sid'), -- sid
-                dbms_debug_jdwp.current_session_serial, -- serial#
-                v_name, -- log_source
-                v_line, -- line_no
-                nvl(i_msg_type, 'A'), -- message_type
-                nvl(i_group, g_msg_group), -- message_group
-                v_msg_chunk,  -- message
-                coalesce(v_params, i_extra) -- parameters overwrite the "extra" parameter
-                );
+        insert into skippy_logs
+        (
+            id,
+            log_ts,
+            username,
+            os_user,
+            instance,
+            sid,
+            serial,
+            log_source,
+            line_no,
+            message_type,
+            message_group,
+            message,
+            message_clob
+        )
+        values
+        (
+            skippy_logs_id_seq.nextval, -- id,
+            systimestamp, -- log_ts
+            sys_context('userenv', 'session_user'), -- username
+            sys_context('userenv', 'os_user'), -- os_user
+            sys_context('userenv', 'instance'), -- instance
+            sys_context('userenv', 'sid'), -- sid
+            dbms_debug_jdwp.current_session_serial, -- serial#
+            v_name, -- log_source
+            v_line, -- line_no
+            nvl(i_msg_type, 'A'), -- message_type
+            nvl(i_group, g_msg_group), -- message_group
+            v_msg,  -- message
+            v_extra -- extra
+        );
+        
+        commit;
+        
+        -- Output to console if enabled
+        -- This is in a neseted block so that any error is non-fatal
+        begin
+            if g_interactive = 'Y' then
+                dbms_output.put_line(v_msg);
+            end if;
+        end;    
 
-            v_start := v_start + GC_MAX_MSG_LEN;
-            commit;
-
-            -- Output to console if enabled
-            -- This is in a nested block so that any error is non-fatal
-            begin
-                if g_interactive = 'Y' then
-                    dbms_output.put_line(v_msg_chunk);
-                end if;
-            exception
-                when others then null;
-            end;
-        end loop;
     exception
         when others then null;
     end log;

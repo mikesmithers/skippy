@@ -66,9 +66,10 @@ create or replace package skippy as
     -- skippy.log('Down a mine shaft ?', 'W');
     -- skippy.log('Skippy the Bush Kangaroo', i_source => 'mypackage.procedure');
     -- skippy.log('What is a Wallaby', i_group => 'DAILY_BATCH_RUN');
-
+    -- skippy.log('Long Message', i_extra => q'[Well, it's a long story]');
+    
     procedure log(
-        i_msg      in varchar2,
+        i_msg in varchar2 default null,
         i_msg_type in skippy_logs.message_type%type default 'I',
         i_source in skippy_logs.log_source%type default null,
         i_line_no in pls_integer default null,
